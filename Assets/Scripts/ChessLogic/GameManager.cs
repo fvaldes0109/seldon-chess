@@ -209,18 +209,6 @@ namespace ChessLogic {
             return _board.ToString() + FEN;
         }
 
-        public bool IsLegal(string origin, string destiny) {
-
-            ulong originC = 1ul << Position.CoordinatesToIndex(origin);
-            ulong destinyC = 1ul << Position.CoordinatesToIndex(destiny);
-
-            foreach (var item in _legalMoves) {
-                if (originC == item.Origin && destinyC == item.Destiny) return true;
-            }
-
-            return false;
-        }
-
         private Move GetLegal(ulong origin, ulong destiny, int promoPiece = -1) {
 
             foreach (var item in _legalMoves) {

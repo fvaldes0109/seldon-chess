@@ -22,10 +22,15 @@ public class Manager : MonoBehaviour {
 
     public void Play(GameObject origin, GameObject destiny) {
 
+        if (origin == null || destiny == null) {
+            PrivatePlay("a1a1");
+            return;
+        }
+
         orig = origin.GetComponent<Tile>().Coordinate;
         target = destiny.GetComponent<Tile>().Coordinate;
 
-        if (chessManager.IsPromotion(orig, target) && chessManager.IsLegal(orig, target)) {
+        if (chessManager.IsPromotion(orig, target) && IsLegal(orig, target)) {
             
             var tempArray = chessManager.BoardArray;
             int originC = Position.CoordinatesToIndex(orig);
@@ -50,8 +55,22 @@ public class Manager : MonoBehaviour {
         PrivatePlay(orig + target + piece);
     }
 
+    public bool IsLegal(string origin, string destiny) {
+
+            ulong originC = 1ul << Position.CoordinatesToIndex(origin);
+            ulong destinyC = 1ul << Position.CoordinatesToIndex(destiny);
+
+            foreach (var item in chessManager.LegalMoves) {
+                if (originC == item.Origin && destinyC == item.Destiny) return true;
+            }
+
+            return false;
+    }
+
     private void PrivatePlay(string move) {
-        chessManager.Play(move);
+
+        bool result = chessManager.Play(move);
+        if (result) FindObjectOfType<Board>().SetLastMove(move.Substring(0, 2), move.Substring(2, 2));
         FindObjectOfType<Board>().CreateBoard(chessManager.BoardArray);
 
         Turn = Turn == 'w' ? 'b' : 'w';

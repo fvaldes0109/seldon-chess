@@ -8,6 +8,7 @@ public class Drag : MonoBehaviour {
 
     private Canvas canvas;
     private GameObject origin;
+    private bool dragging = false;
 
     void Start() {
         canvas = FindObjectOfType<Canvas>();
@@ -22,10 +23,17 @@ public class Drag : MonoBehaviour {
         EventSystem.current.RaycastAll(pointerEvent, result);
         origin = result[0].gameObject;
         GetComponent<Image>().raycastTarget = true;
+
+        FindObjectOfType<Board>().ShowLegals(origin.GetComponent<Tile>().Coordinate);
+    }
+
+    public void MouseUp() {
+        if (!dragging) FindObjectOfType<Manager>().Play(null, null);
     }
 
     public void Dragging(BaseEventData data) {
         
+        dragging = true;
         var pointerEvent = (PointerEventData)data;
 
         Vector2 position;
@@ -52,8 +60,9 @@ public class Drag : MonoBehaviour {
         EventSystem.current.RaycastAll(pointerEvent, result);
 
         if (result.Count > 0) FindObjectOfType<Manager>().Play(origin, result[0].gameObject);
-        else FindObjectOfType<Manager>().Play(origin, origin);
+        else FindObjectOfType<Manager>().Play(null, null);
 
+        dragging = false;
         GameObject.Destroy(gameObject);
     }
 }
