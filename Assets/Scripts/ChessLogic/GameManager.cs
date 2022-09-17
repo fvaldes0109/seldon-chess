@@ -7,11 +7,13 @@ namespace ChessLogic {
 
     public class GameManager {
 
+        private MovesGenerator generator;
         private Board _board;
         private Stack<Tuple<Move, ulong, ulong, int>> _history;
         private List<Move> _legalMoves;
 
         public IEnumerable<Move> LegalMoves => _legalMoves;
+        public char SideToMove => (_sideToMove == 0 ? 'w' : 'b');
 
         private ulong _castling;
         private int _sideToMove;
@@ -91,12 +93,13 @@ namespace ChessLogic {
             _halfMove = int.Parse(info[4]);
             _fullMove = int.Parse(info[5]);
 
-            _legalMoves = MovesGenerator.Generate(_board.GetBitboards, 0, _castling, _enPassant);
+            generator = new MovesGenerator(_board.GetBitboards);
+            _legalMoves = generator.Generate(_sideToMove, _castling, _enPassant);
         }
 
-        public bool Play(string move, bool verified = false) {
+        public bool Play(string move) {
 
-            if (!Regex.IsMatch(move, "^([a-hA-H][1-8]){2}([qrbn])?$")) return false;
+             if (!Regex.IsMatch(move, "^([a-hA-H][1-8]){2}([qrbn])?$")) return false;
 
             int origin = Position.CoordinatesToIndex(move.Substring(0, 2));
             int destiny = Position.CoordinatesToIndex(move.Substring(2, 2));
@@ -107,31 +110,40 @@ namespace ChessLogic {
             Move newMove = GetLegal(originU64, destinyU64, promoPiece);
             if (newMove == null) return false;
 
-            _board.MakeMove(newMove);
-            _history.Push(new Tuple<Move, ulong, ulong, int>(newMove, _castling, _enPassant, _halfMove));
+            Play(newMove);
+            return true;
+        }
+
+        public void Play(Move move) {
             
-            if (newMove.Flag == Move.EnPassant) {
+            int origin = Bits.BitIndex[move.Origin];
+            int destiny = Bits.BitIndex[move.Destiny];
+
+            _board.MakeMove(move);
+            _history.Push(new Tuple<Move, ulong, ulong, int>(move, _castling, _enPassant, _halfMove));
+            
+            if (move.Flag == Move.EnPassant) {
                 
                 ulong lastEP = _history.Peek().Item3;
                 ulong target = _sideToMove == 0 ? Directions.So(lastEP) : Directions.No(lastEP);
                 _board.TogglePiece(Piece.Pawn, _sideToMove ^ 1, target);
             }
-            else if (newMove.Flag == Move.CastlingKing) {
+            else if (move.Flag == Move.CastlingKing) {
 
                 _board.TogglePiece(Piece.Rook, _sideToMove, _sideToMove == 0 ? 0x80 : 0x8000000000000000);
                 _board.TogglePiece(Piece.Rook, _sideToMove, _sideToMove == 0 ? Bits.CastlingRookK : Bits.CastlingRookk);
             }
-            else if (newMove.Flag == Move.CastlingQueen) {
+            else if (move.Flag == Move.CastlingQueen) {
 
                 _board.TogglePiece(Piece.Rook, _sideToMove, _sideToMove == 0 ? 0x1 : 0x100000000000000ul);
                 _board.TogglePiece(Piece.Rook, _sideToMove, _sideToMove == 0 ? Bits.CastlingRookQ : Bits.CastlingRookq);
             }
-            else if (newMove.IsPromotion()) {
-                _board.TogglePiece(Piece.Pawn, _sideToMove, destinyU64);
-                _board.TogglePiece(promoPiece, _sideToMove, destinyU64);
+            else if (move.IsPromotion()) {
+                _board.TogglePiece(Piece.Pawn, _sideToMove, move.Destiny);
+                _board.TogglePiece(move.GetPromoPiece(), _sideToMove, move.Destiny);
             }
 
-            if (newMove.Piece == Piece.Pawn) {
+            if (move.Piece == Piece.Pawn) {
 
                 if (Position.Row(origin) == 1 && Position.Row(destiny) == 3)
                     _enPassant = 1ul << ((Position.Row(origin) + 1) * 8 + Position.Col(origin));
@@ -141,19 +153,17 @@ namespace ChessLogic {
             }
             else _enPassant = 0;
 
-            if (newMove.Piece == Piece.King) _castling &= (_sideToMove == 0 ? ~Bits.CastlingRow1 : ~Bits.CastlingRow8);
+            if (move.Piece == Piece.King) _castling &= (_sideToMove == 0 ? ~Bits.CastlingRow1 : ~Bits.CastlingRow8);
             if (origin == 7 || destiny == 7) _castling &= ~Bits.CastlingK;
             if (origin == 0 || destiny == 0) _castling &= ~Bits.CastlingQ;
             if (origin == 63 || destiny == 63) _castling &= ~Bits.Castlingk;
             if (origin == 56 || destiny == 56) _castling &= ~Bits.Castlingq;
 
-            _halfMove = newMove.Piece == Piece.Pawn || newMove.CPiece != Piece.None ? 0 : _halfMove + 1;
+            _halfMove = move.Piece == Piece.Pawn || move.CPiece != Piece.None ? 0 : _halfMove + 1;
             _fullMove += _sideToMove == 0 ? 0 : 1;
             _sideToMove ^= 1;
-
-            _legalMoves = MovesGenerator.Generate(_board.GetBitboards, _sideToMove, _castling, _enPassant);
-
-            return true;
+            // Non-optimal
+            _legalMoves = generator.Generate(_sideToMove, _castling, _enPassant);
         }
 
         public bool IsPromotion(string origin, string destiny) {
@@ -200,8 +210,8 @@ namespace ChessLogic {
             _enPassant = last.Item3;
             _halfMove = last.Item4;
             _sideToMove ^= 1;
-
-            _legalMoves = MovesGenerator.Generate(_board.GetBitboards, _sideToMove, _castling, _enPassant);
+            // Non-optimal
+            _legalMoves = generator.Generate(_sideToMove, _castling, _enPassant);
         }
 
         public override string ToString() {

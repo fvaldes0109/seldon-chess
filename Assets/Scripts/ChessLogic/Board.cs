@@ -24,7 +24,7 @@ namespace ChessLogic {
             return result;
         } }
 
-        public Bitboards GetBitboards => (Bitboards)bitboards.Clone();
+        public Bitboards GetBitboards => bitboards;
 
         public Board(string fenPosition) {
 

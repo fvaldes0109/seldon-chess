@@ -15,9 +15,8 @@ public class Manager : MonoBehaviour {
 
     void Start() {
         
-        chessManager = new GameManager("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+        chessManager = new GameManager("r2q1rk1/pP1p2pp/Q4n2/bbp1p3/Np6/1B3NBn/pPPP1PPP/R3K2R b KQ - 0 1");
         FindObjectOfType<Board>().CreateBoard(chessManager.BoardArray);
-        Turn = 'w';
     }
 
     public void Play(GameObject origin, GameObject destiny) {
@@ -72,7 +71,5 @@ public class Manager : MonoBehaviour {
         bool result = chessManager.Play(move);
         if (result) FindObjectOfType<Board>().SetLastMove(move.Substring(0, 2), move.Substring(2, 2));
         FindObjectOfType<Board>().CreateBoard(chessManager.BoardArray);
-
-        Turn = Turn == 'w' ? 'b' : 'w';
     }
 }

@@ -1,21 +1,64 @@
 using System.Linq;
 using System.Collections.Generic;
+using UnityEngine;
 
 namespace ChessLogic {
 
-    public static class MovesGenerator {
+    public class MovesGenerator {
 
-        private static Dictionary<ulong, ulong> attacksFrom = new Dictionary<ulong, ulong>();
-        private static List<Move> moves = new List<Move>();
+        private ulong enPassant;
+        private ulong castling;
 
-        public static List<Move> Generate(Bitboards bitboards, int color, ulong castling, ulong enPassant) {
+        private Dictionary<ulong, ulong> attacksFrom;
+        private List<Move> moves;
+        private ulong enemyAttacks;
+        private Bitboards bitboards;
+        private ulong kingPos;
+        private int checksAmount;
+        private ulong checkerPos;
+        private ulong forcedRay;
+        private ulong oppositeSquares;
+        private Dictionary<ulong, ulong> pinnedRange;
+        private bool enPassantCheck;
+
+        public MovesGenerator(Bitboards bitboards) {
+
+            this.bitboards = bitboards;
+            attacksFrom = new Dictionary<ulong, ulong>();
+            pinnedRange = new Dictionary<ulong, ulong>();
+            moves = new List<Move>();
+        }
+    
+
+        public List<Move> Generate(int color, ulong castling, ulong enPassant) {
+            
+            this.enPassant = enPassant;
+            this.castling = castling;
 
             moves.Clear();
+            pinnedRange.Clear();
+            enemyAttacks = 0;
+            kingPos = bitboards.Pieces[color, Piece.King];
+            checksAmount = 0;
+            checkerPos = 0;
+            forcedRay = 0;
+            oppositeSquares = 0;
+            enPassantCheck = false;
 
-            GetKingMoves(bitboards, color, castling);
-            GetPawnMoves(bitboards, color, enPassant);
-            GetKnightMoves(bitboards, color);
-            GetSlidingMoves(bitboards, color);
+            GetKingMoves(color ^ 1, true);
+            GetPawnMoves(color ^ 1, true);
+            GetKnightMoves(color ^ 1, true);
+            GetSlidingMoves(color ^ 1, true);
+
+            GetKingMoves(color);
+            if (checksAmount < 2) {
+
+                GetPawnMoves(color);
+                GetKnightMoves(color);
+                GetSlidingMoves(color);
+            }
+
+            // System.Console.WriteLine(Bits.BitsToString(enemyAttacks));
 
             // foreach (var pieces in moves) {
             //     System.Console.WriteLine(pieces.Key + ": ");
@@ -33,32 +76,69 @@ namespace ChessLogic {
         private static ulong EmptySideq = 0xE00000000000000;
         private static ulong EmptySidek = 0x6000000000000000;
 
-        private static void GetKingMoves(Bitboards bitboards, int color, ulong castling) {
+        private void GetKingMoves(int color, bool attacks = false) {
 
-            ulong kingPos = bitboards.Pieces[color, Piece.King];
+            if (attacks) {
+                enemyAttacks |= Attacks.KingAttacks[Bits.BitIndex[bitboards.Pieces[color, Piece.King]]];
+                return;
+            }
+
             ulong availableCastling = 0;
 
-            if ((color == 0) && (Bits.CastlingRow1 & castling) != 0) {
-                if ((castling & Bits.CastlingK) != 0 && (EmptySideK & bitboards.GeneralOccupied) == 0)
-                    availableCastling |= Bits.CastlingK;
-                if ((castling & Bits.CastlingQ) != 0 && (EmptySideQ & bitboards.GeneralOccupied) == 0)
-                    availableCastling |= Bits.CastlingQ;
-            }
-            else if ((color == 1) && (Bits.CastlingRow8 & castling) != 0) {
-                if ((castling & Bits.Castlingk) != 0 && (EmptySidek & bitboards.GeneralOccupied) == 0)
-                    availableCastling |= Bits.Castlingk;
-                if ((castling & Bits.Castlingq) != 0 && (EmptySideq & bitboards.GeneralOccupied) == 0)
-                    availableCastling |= Bits.Castlingq;
-            }
+            if ((kingPos & enemyAttacks) == 0) {
 
+                if ((color == 0) && (Bits.CastlingRow1 & castling) != 0) {
+                    if ((castling & Bits.CastlingK) != 0 && (EmptySideK & bitboards.GeneralOccupied) == 0 && (enemyAttacks & EmptySideK) == 0)
+                        availableCastling |= Bits.CastlingK;
+                    if ((castling & Bits.CastlingQ) != 0 && (EmptySideQ & bitboards.GeneralOccupied) == 0 && (enemyAttacks & (EmptySideQ & ~2ul)) == 0)
+                        availableCastling |= Bits.CastlingQ;
+                }
+                else if ((color == 1) && (Bits.CastlingRow8 & castling) != 0) {
+                    if ((castling & Bits.Castlingk) != 0 && (EmptySidek & bitboards.GeneralOccupied) == 0 && (enemyAttacks & EmptySidek) == 0)
+                        availableCastling |= Bits.Castlingk;
+                    if ((castling & Bits.Castlingq) != 0 && (EmptySideq & bitboards.GeneralOccupied) == 0 && (enemyAttacks & (EmptySideq & ~0x200000000000000ul)) == 0)
+                        availableCastling |= Bits.Castlingq;
+                }
+            }
             ulong availableMoves = (Attacks.KingAttacks[Bits.BitIndex[kingPos]] & ~bitboards.Occupied[color]) | availableCastling;
-            PushMoves(kingPos, availableMoves, bitboards, Piece.King, color, availableCastling);
+            PushMoves(kingPos, availableMoves & ~(enemyAttacks | oppositeSquares), bitboards, Piece.King, color, availableCastling);
         }
 
-        private static void GetPawnMoves(Bitboards bitboards, int color, ulong enPassant) {
+        private void GetPawnMoves(int color, bool attacks = false) {
 
             Direction direction = (color == 0 ? Directions.No : Directions.So);
             Direction opDirection = (color == 0 ? Directions.So : Directions.No);
+
+            ulong leftCaptures = direction(Directions.We(bitboards.Pieces[color, Piece.Pawn]));
+            ulong rightCaptures = direction(Directions.Ea(bitboards.Pieces[color, Piece.Pawn]));
+
+            if (attacks) {
+
+                enemyAttacks |= leftCaptures | rightCaptures;
+                if ((kingPos & leftCaptures) != 0) {
+
+                    if (enPassant != 0) enPassantCheck = true;
+                    checksAmount++;
+                    checkerPos = opDirection(Directions.Ea(kingPos));
+                }
+                else if ((kingPos & rightCaptures) != 0) {
+
+                    if (enPassant != 0) enPassantCheck = true;
+                    checksAmount++;
+                    checkerPos = opDirection(Directions.We(kingPos));
+                }
+                return;
+            }
+
+            leftCaptures &= (bitboards.Occupied[color ^ 1] | enPassant);
+            rightCaptures &= (bitboards.Occupied[color ^ 1] | enPassant);
+
+            foreach (var item in Bits.ActiveBits(leftCaptures)) {
+                PushMoves(opDirection(Directions.Ea(item)), item, bitboards, Piece.Pawn, color, enPassant);
+            }
+            foreach (var item in Bits.ActiveBits(rightCaptures)) {
+                PushMoves(opDirection(Directions.We(item)), item, bitboards, Piece.Pawn, color, enPassant);
+            }
 
             ulong singlePushes =  ~bitboards.GeneralOccupied & direction(bitboards.Pieces[color, Piece.Pawn]);
             ulong doublePushes = ~bitboards.GeneralOccupied & direction(singlePushes) & Bits.RowMask(color + 3);
@@ -70,59 +150,104 @@ namespace ChessLogic {
                 if ((doublePushes & direction(item)) != 0) PushMoves(from, direction(item), bitboards, Piece.Pawn, color);
             }
 
-            ulong leftCaptures = direction(Directions.We(bitboards.Pieces[color, Piece.Pawn])) & (bitboards.Occupied[color ^ 1] | enPassant);
-            ulong rightCaptures = direction(Directions.Ea(bitboards.Pieces[color, Piece.Pawn])) & (bitboards.Occupied[color ^ 1] | enPassant);
-
-            foreach (var item in Bits.ActiveBits(leftCaptures)) {
-                PushMoves(opDirection(Directions.Ea(item)), item, bitboards, Piece.Pawn, color, enPassant);
-            }
-            foreach (var item in Bits.ActiveBits(rightCaptures)) {
-                PushMoves(opDirection(Directions.We(item)), item, bitboards, Piece.Pawn, color, enPassant);
-            }
         }
 
-        private static void GetKnightMoves(Bitboards bitboards, int color) {
-
+        private void GetKnightMoves(int color, bool attacks = false) {
+            
             foreach (var knightPos in Bits.ActiveBits(bitboards.Pieces[color, Piece.Knight])) {
-                ulong attacks = Attacks.KnightAttacks[Bits.BitIndex[knightPos]] & ~bitboards.Occupied[color];
-                PushMoves(knightPos, attacks, bitboards, Piece.Knight, color);
+
+                ulong knightAttacks = Attacks.KnightAttacks[Bits.BitIndex[knightPos]];
+
+                if (attacks) {
+                    enemyAttacks |= knightAttacks;
+                    UpdateCheck(knightPos, knightAttacks);
+                    continue;
+                }
+                PushMoves(knightPos, knightAttacks & ~bitboards.Occupied[color], bitboards, Piece.Knight, color);
             }
         }
 
-        private static void GetSlidingMoves(Bitboards bitboards, int color) {
+        private void GetSlidingMoves(int color, bool attacks = false) {
 
             foreach (var bishopPos in Bits.ActiveBits(bitboards.Pieces[color, Piece.Bishop])) {
-                GetSpecificSlidingMove(bitboards, Piece.Bishop, color, Bits.BitIndex[bishopPos], new int[] { 0, 2, 4, 6 });
+                GetSpecificSlidingMove(Piece.Bishop, color, Bits.BitIndex[bishopPos], new int[] { 0, 2, 4, 6 }, attacks);
             }
 
             foreach (var rookPos in Bits.ActiveBits(bitboards.Pieces[color, Piece.Rook])) {
-                GetSpecificSlidingMove(bitboards, Piece.Rook, color, Bits.BitIndex[rookPos], new int[] { 1, 3, 5, 7 });
+                GetSpecificSlidingMove(Piece.Rook, color, Bits.BitIndex[rookPos], new int[] { 1, 3, 5, 7 }, attacks);
             }
 
             foreach (var queenPos in Bits.ActiveBits(bitboards.Pieces[color, Piece.Queen])) {
-                GetSpecificSlidingMove(bitboards, Piece.Queen, color, Bits.BitIndex[queenPos], new int[] { 0, 1, 2, 3, 4, 5, 6, 7 });
+                GetSpecificSlidingMove(Piece.Queen, color, Bits.BitIndex[queenPos], new int[] { 0, 1, 2, 3, 4, 5, 6, 7 }, attacks);
             }
         }
 
-        private static void GetSpecificSlidingMove(Bitboards bitboards, int piece, int color, int sq, int[] indexes) {
-
+        private void GetSpecificSlidingMove(int piece, int color, int sq, int[] indexes, bool attacks) {
+            
+            ulong sqU64 = 1ul << sq;
             foreach (var dir in indexes) {
                 
-                ulong attacks = Attacks.RayMasks[dir, sq];
-                ulong blockers = attacks & bitboards.GeneralOccupied;
+                ulong rayAttack = Attacks.RayMasks[dir, sq];
+                ulong blockers = rayAttack & bitboards.GeneralOccupied;
 
+                ulong result = rayAttack;
                 if (blockers != 0) {
-                    int firstBlocker = (dir < 4 ? Bits.ActiveBitsIndex(blockers).First() : Bits.ActiveBitsIndex(blockers).Last());
-                    ulong blockerU64 = 1ul << firstBlocker;
-                    attacks ^= Attacks.RayMasks[dir, firstBlocker];
-                    attacks ^= bitboards.Occupied[color] & blockerU64;
+                    
+                    var blockersBits = Bits.ActiveBitsIndex(blockers);
+                    int blockersAmount = blockersBits.Count();
+                    int firstBlocker = (dir < 4 ? blockersBits.First() : blockersBits.Last());
+                    int secondBlocker = 0, thirdBlocker = 0;
+
+                    if (blockersAmount >= 2) {
+
+                        secondBlocker = (dir < 4 ? blockersBits.ElementAt(1) : blockersBits.ElementAt(blockersAmount - 2));
+                        if (blockersAmount == 3) {
+                            thirdBlocker = (dir < 4 ? blockersBits.ElementAt(2) : blockersBits.ElementAt(blockersAmount - 3));
+                        }
+                    }
+                    
+                    ulong firstBlockU64 = 1ul << firstBlocker;
+
+                    if (attacks) {
+
+                        ulong secondBlockU64 = 1ul << secondBlocker;
+                        ulong thirdBlockU64 = 1ul << thirdBlocker;
+                        int doublePushRow = color == 0 ? 4 : 3;
+
+                        if (firstBlockU64 == kingPos) {
+                            oppositeSquares |= Attacks.RayMasks[dir, firstBlocker];
+                        }
+                        else if (secondBlockU64 == kingPos) {
+                            pinnedRange[firstBlockU64] = rayAttack | sqU64;
+                        }
+                        else if (Position.Row(Bits.BitIndex[kingPos]) != doublePushRow && (Attacks.HorizontalMask[sq] & kingPos) != 0 && enPassant != 0 && thirdBlockU64 == kingPos)
+                            if (((bitboards.Pieces[0, Piece.Pawn] & firstBlockU64) != 0 && (bitboards.Pieces[1, Piece.Pawn] & secondBlockU64) != 0)
+                            || ((bitboards.Pieces[1, Piece.Pawn] & firstBlockU64) != 0 && (bitboards.Pieces[0, Piece.Pawn] & secondBlockU64) != 0))
+                                enPassant = 0; 
+                    }
+                    
+                    rayAttack ^= Attacks.RayMasks[dir, firstBlocker];
+                    result = rayAttack ^ (bitboards.Occupied[color] & firstBlockU64);
+                }
+                if (attacks) {
+                    enemyAttacks |= rayAttack;
+                    bool isCheck = UpdateCheck(sqU64, rayAttack);
+                    if (isCheck) forcedRay = rayAttack;
+                    continue;
                 }
 
-                PushMoves(1ul << sq, attacks, bitboards, piece, color);
+                PushMoves(sqU64, result, bitboards, piece, color);
             }
         }
 
-        private static void PushMoves(ulong from, ulong to, Bitboards bb, int piece, int color, ulong specials = 0) {
+        private void PushMoves(ulong from, ulong to, Bitboards bb, int piece, int color, ulong specials = 0) {
+            
+            ulong originalTo = to;
+            if (piece != Piece.King) {
+                if (checksAmount > 0) to &= (checkerPos | forcedRay);
+                if (enPassantCheck && piece == Piece.Pawn && (originalTo & enPassant) != 0) to |= enPassant;
+                if (pinnedRange.ContainsKey(from)) to &= pinnedRange[from];
+            }
 
             foreach (var destiny in Bits.ActiveBits(to)) {
                 
@@ -143,13 +268,23 @@ namespace ChessLogic {
                     else if (piece == Piece.Pawn && (destiny & specials) != 0)flag = Move.EnPassant;
                 }
 
-                if (piece == Piece.Pawn && (destiny & Bits.Row1Mask) != 0 || (destiny & Bits.Row8Mask) != 0) {
+                if (piece == Piece.Pawn && ((destiny & Bits.Row1Mask) != 0 || (destiny & Bits.Row8Mask) != 0)) {
                     foreach (var item in Move.PromoIndex()) {
                         moves.Add(new Move(from, destiny, piece, color, cpiece, item));
                     }
                 }
                 else moves.Add(new Move(from, destiny, piece, color, cpiece, flag));
             }
+        }
+
+        private bool UpdateCheck(ulong piecePos, ulong attacks) {
+
+            if ((attacks & kingPos) != 0) {
+                checkerPos = piecePos;
+                checksAmount++;
+                return true;
+            }
+            return false;
         }
     }
 }

@@ -5,6 +5,7 @@ namespace ChessLogic {
         public static ulong[] KingAttacks = new ulong[64];
         public static ulong[] KnightAttacks = new ulong[64];
         public static ulong[,] RayMasks = new ulong[8, 64];
+        public static ulong[] HorizontalMask = new ulong[64];
 
         public static void Init() {
 
@@ -70,6 +71,8 @@ namespace ChessLogic {
                 RayMasks[Directions.East, i] = Directions.EaMask(i);
                 RayMasks[Directions.South, i] = Directions.SoMask(i);
                 RayMasks[Directions.West, i] = Directions.WeMask(i);
+
+                HorizontalMask[i] = RayMasks[Directions.East, i] | RayMasks[Directions.West, i];
             }
         }
     }
