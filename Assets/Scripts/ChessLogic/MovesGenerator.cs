@@ -13,6 +13,7 @@ namespace ChessLogic {
         private List<Move> moves;
         private ulong enemyAttacks;
         private Bitboards bitboards;
+        private HashSet<ulong>[,] pieces;
         private ulong kingPos;
         private int checksAmount;
         private ulong checkerPos;
@@ -21,9 +22,10 @@ namespace ChessLogic {
         private Dictionary<ulong, ulong> pinnedRange;
         private bool enPassantCheck;
 
-        public MovesGenerator(Bitboards bitboards) {
+        public MovesGenerator(Bitboards bitboards, HashSet<ulong>[,] pieces) {
 
             this.bitboards = bitboards;
+            this.pieces = pieces;
             attacksFrom = new Dictionary<ulong, ulong>();
             pinnedRange = new Dictionary<ulong, ulong>();
             moves = new List<Move>();
@@ -154,7 +156,7 @@ namespace ChessLogic {
 
         private void GetKnightMoves(int color, bool attacks = false) {
             
-            foreach (var knightPos in Bits.ActiveBits(bitboards.Pieces[color, Piece.Knight])) {
+            foreach (var knightPos in pieces[color, Piece.Knight]) {
 
                 ulong knightAttacks = Attacks.KnightAttacks[Bits.BitIndex[knightPos]];
 
@@ -169,15 +171,15 @@ namespace ChessLogic {
 
         private void GetSlidingMoves(int color, bool attacks = false) {
 
-            foreach (var bishopPos in Bits.ActiveBits(bitboards.Pieces[color, Piece.Bishop])) {
+            foreach (var bishopPos in pieces[color, Piece.Bishop]) {
                 GetSpecificSlidingMove(Piece.Bishop, color, Bits.BitIndex[bishopPos], new int[] { 0, 2, 4, 6 }, attacks);
             }
 
-            foreach (var rookPos in Bits.ActiveBits(bitboards.Pieces[color, Piece.Rook])) {
+            foreach (var rookPos in pieces[color, Piece.Rook]) {
                 GetSpecificSlidingMove(Piece.Rook, color, Bits.BitIndex[rookPos], new int[] { 1, 3, 5, 7 }, attacks);
             }
 
-            foreach (var queenPos in Bits.ActiveBits(bitboards.Pieces[color, Piece.Queen])) {
+            foreach (var queenPos in pieces[color, Piece.Queen]) {
                 GetSpecificSlidingMove(Piece.Queen, color, Bits.BitIndex[queenPos], new int[] { 0, 1, 2, 3, 4, 5, 6, 7 }, attacks);
             }
         }
@@ -201,7 +203,7 @@ namespace ChessLogic {
                     if (blockersAmount >= 2) {
 
                         secondBlocker = (dir < 4 ? blockersBits.ElementAt(1) : blockersBits.ElementAt(blockersAmount - 2));
-                        if (blockersAmount == 3) {
+                        if (blockersAmount >= 3) {
                             thirdBlocker = (dir < 4 ? blockersBits.ElementAt(2) : blockersBits.ElementAt(blockersAmount - 3));
                         }
                     }
@@ -209,21 +211,21 @@ namespace ChessLogic {
                     ulong firstBlockU64 = 1ul << firstBlocker;
 
                     if (attacks) {
-
                         ulong secondBlockU64 = 1ul << secondBlocker;
                         ulong thirdBlockU64 = 1ul << thirdBlocker;
-                        int doublePushRow = color == 0 ? 4 : 3;
-
+                        int doublePushRow = color == 0 ? 3 : 4;
+                
                         if (firstBlockU64 == kingPos) {
                             oppositeSquares |= Attacks.RayMasks[dir, firstBlocker];
                         }
                         else if (secondBlockU64 == kingPos) {
                             pinnedRange[firstBlockU64] = rayAttack | sqU64;
                         }
-                        else if (Position.Row(Bits.BitIndex[kingPos]) != doublePushRow && (Attacks.HorizontalMask[sq] & kingPos) != 0 && enPassant != 0 && thirdBlockU64 == kingPos)
+                        else if (Position.Row(Bits.BitIndex[kingPos]) == doublePushRow && (Attacks.HorizontalMask[sq] & kingPos) != 0 && enPassant != 0 && thirdBlockU64 == kingPos) {
                             if (((bitboards.Pieces[0, Piece.Pawn] & firstBlockU64) != 0 && (bitboards.Pieces[1, Piece.Pawn] & secondBlockU64) != 0)
                             || ((bitboards.Pieces[1, Piece.Pawn] & firstBlockU64) != 0 && (bitboards.Pieces[0, Piece.Pawn] & secondBlockU64) != 0))
-                                enPassant = 0; 
+                                enPassant = 0;
+                        }
                     }
                     
                     rayAttack ^= Attacks.RayMasks[dir, firstBlocker];

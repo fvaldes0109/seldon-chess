@@ -1,9 +1,12 @@
 ﻿using System.Text;
+using System.Collections.Generic;
+using UnityEngine;
 
 namespace ChessLogic {
 
     public class Board {
         
+        public HashSet<ulong>[,] pieces = new HashSet<ulong>[2, 6];
         Bitboards bitboards;
         public char[] CharBoard { get {
 
@@ -29,6 +32,11 @@ namespace ChessLogic {
         public Board(string fenPosition) {
 
             bitboards = new Bitboards();
+            for (int i = 0; i < 2; i++) {
+                for (int j = 0; j < 6; j++) {
+                    pieces[i, j] = new HashSet<ulong>();
+                }
+            }
 
             string[] rows = fenPosition.Split('/');
 
@@ -42,6 +50,7 @@ namespace ChessLogic {
                         
                         int colorIndex = (char.IsLower(item) ? 1 : 0);
                         bitboards.Pieces[colorIndex, Piece.CharToIndex(item)] |= 1ul << boardIndex.Current;
+                        pieces[colorIndex, Piece.CharToIndex(item)].Add(1ul << boardIndex.Current);
 
                         boardIndex.MoveNext();
                     }
@@ -60,8 +69,8 @@ namespace ChessLogic {
             }
         }
 
-        public void MakeMove(Move move) {
-
+        public void MakeMove(Move move, bool unmaking = false) {
+            
             ulong from = move.Origin;
             ulong to = move.Destiny;
             ulong fromTo = from ^ to;
@@ -69,7 +78,20 @@ namespace ChessLogic {
             bitboards.Pieces[move.Color, move.Piece] ^= fromTo;
             bitboards.Occupied[move.Color] ^= fromTo;
 
+            if(!unmaking) {
+                pieces[move.Color, move.Piece].Remove(from);
+                pieces[move.Color, move.Piece].Add(to);
+            }
+            else {
+                pieces[move.Color, move.Piece].Remove(to);
+                pieces[move.Color, move.Piece].Add(from);
+            }
+
             if (move.CPiece != Piece.None) {
+
+                if (!unmaking) pieces[move.CColor, move.CPiece].Remove(to);
+                else pieces[move.CColor, move.CPiece].Add(to);
+
                 bitboards.Pieces[move.CColor, move.CPiece] ^= to;
                 bitboards.Occupied[move.CColor] ^= to;
                 bitboards.GeneralOccupied ^= from;
@@ -79,10 +101,13 @@ namespace ChessLogic {
 
         public void UnmakeMove(Move move) {
 
-            MakeMove(move);
+            MakeMove(move, unmaking: true);
         }
 
         public void TogglePiece(int piece, int color, ulong destiny) {
+
+            if ((bitboards.Pieces[color, piece] & destiny) == 0) pieces[color, piece].Add(destiny);
+            else pieces[color, piece].Remove(destiny); 
 
             bitboards.Pieces[color, piece] ^= destiny;
             bitboards.Occupied[color] ^= destiny;

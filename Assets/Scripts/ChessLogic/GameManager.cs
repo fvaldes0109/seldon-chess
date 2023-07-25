@@ -6,7 +6,7 @@ using System.Text.RegularExpressions;
 namespace ChessLogic {
 
     public class GameManager {
-
+        
         private MovesGenerator generator;
         private Board _board;
         private Stack<Tuple<Move, ulong, ulong, int>> _history;
@@ -30,8 +30,8 @@ namespace ChessLogic {
             int spaces = 0;
             while (boardIndex.MoveNext()) {
 
-                if (boardIndex.Current % 8 == 0 && result.Length > 0) {
-
+                if (boardIndex.Current % 8 == 0 && boardIndex.Current != 56) {
+                    
                     if (spaces > 0) result.Append(spaces);
                     result.Append("/");
                     spaces = 0;
@@ -49,6 +49,8 @@ namespace ChessLogic {
                     spaces++;
                 }
             }
+
+            if (spaces > 0) result.Append(spaces);
 
             string strSide = (_sideToMove == 0 ? "w" : "b");
             StringBuilder strCastle = new StringBuilder();
@@ -93,13 +95,13 @@ namespace ChessLogic {
             _halfMove = int.Parse(info[4]);
             _fullMove = int.Parse(info[5]);
 
-            generator = new MovesGenerator(_board.GetBitboards);
+            generator = new MovesGenerator(_board.GetBitboards, _board.pieces);
             _legalMoves = generator.Generate(_sideToMove, _castling, _enPassant);
         }
 
         public bool Play(string move) {
 
-             if (!Regex.IsMatch(move, "^([a-hA-H][1-8]){2}([qrbn])?$")) return false;
+            if (!Regex.IsMatch(move, "^([a-hA-H][1-8]){2}([qrbn])?$")) return false;
 
             int origin = Position.CoordinatesToIndex(move.Substring(0, 2));
             int destiny = Position.CoordinatesToIndex(move.Substring(2, 2));

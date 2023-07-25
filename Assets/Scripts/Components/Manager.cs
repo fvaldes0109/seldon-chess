@@ -1,13 +1,16 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using TMPro;
 
 using ChessLogic;
 
 public class Manager : MonoBehaviour {
 
+    public TextMeshProUGUI fenText;
     public GameObject promoPanel;
     public char Turn { get; private set; }
+    public string CurrentFEN { get => chessManager.FEN; }
 
     GameManager chessManager;
     string orig;
@@ -15,8 +18,9 @@ public class Manager : MonoBehaviour {
 
     void Start() {
         
-        chessManager = new GameManager("r2q1rk1/pP1p2pp/Q4n2/bbp1p3/Np6/1B3NBn/pPPP1PPP/R3K2R b KQ - 0 1");
+        chessManager = new GameManager("8/2p5/K2p4/1P6/1R2Ppkr/6P1/8/8 b - e3 0 3");
         FindObjectOfType<Board>().CreateBoard(chessManager.BoardArray);
+        fenText.text = chessManager.FEN;
     }
 
     public void Play(GameObject origin, GameObject destiny) {
@@ -46,6 +50,8 @@ public class Manager : MonoBehaviour {
             }
         }
         else PrivatePlay(orig + target);
+
+        fenText.text = chessManager.FEN;
     }
 
     public void ExecutePromotion(string piece) {
