@@ -1840,8 +1840,9 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1333443617}
-  - component: {fileID: 1333443618}
   - component: {fileID: 1333443619}
+  - component: {fileID: 1333443621}
+  - component: {fileID: 1333443620}
   m_Layer: 0
   m_Name: Manager
   m_TagString: Untagged
@@ -1864,20 +1865,6 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 0
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &1333443618
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1333443616}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: df21af8b18d349c5faed70e14e874bcf, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  fenText: {fileID: 1995435734}
-  promoPanel: {fileID: 61291369}
 --- !u!114 &1333443619
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1891,6 +1878,34 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   depthText: {fileID: 2064961263}
+--- !u!114 &1333443620
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1333443616}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ff5555fff0aee439cb2a5c16d96c3174, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  fenText: {fileID: 1995435734}
+  promoPanel: {fileID: 61291369}
+--- !u!114 &1333443621
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1333443616}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2c203995cae347f229effa458f162c87, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  startPosition: rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1
+  isHuman: 0100
 --- !u!1 &1371784002
 GameObject:
   m_ObjectHideFlags: 0
@@ -2421,7 +2436,7 @@ RectTransform:
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 0}
   m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: -486.3199, y: 50}
+  m_SizeDelta: {x: -287.5322, y: 50}
   m_Pivot: {x: 0.5, y: 0}
 --- !u!114 &1995435734
 MonoBehaviour:
@@ -2470,8 +2485,8 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 30
-  m_fontSizeBase: 30
+  m_fontSize: 24
+  m_fontSizeBase: 24
   m_fontWeight: 400
   m_enableAutoSizing: 0
   m_fontSizeMin: 18

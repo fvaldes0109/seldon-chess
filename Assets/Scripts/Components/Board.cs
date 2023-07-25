@@ -48,7 +48,7 @@ public class Board : MonoBehaviour {
         var tiles = GameObject.FindGameObjectsWithTag("Tile");
 
         foreach (var tile in tiles) {
-            if (FindObjectOfType<Manager>().IsLegal(origin, tile.GetComponent<Tile>().Coordinate)) {
+            if (FindObjectOfType<MoveManager>().IsLegal(origin, tile.GetComponent<Tile>().Coordinate)) {
 
                 int tileIndex = Position.CoordinatesToIndex(tile.GetComponent<Tile>().Coordinate);
                 bool isDark  = (Position.Row(tileIndex) + Position.Col(tileIndex)) % 2 == 0;

@@ -5,7 +5,7 @@ using TMPro;
 
 using ChessLogic;
 
-public class Manager : MonoBehaviour {
+public class MoveManager : MonoBehaviour {
 
     public TextMeshProUGUI fenText;
     public GameObject promoPanel;
@@ -16,17 +16,16 @@ public class Manager : MonoBehaviour {
     string orig;
     string target;
 
-    void Start() {
+    public void Start() {
         
-        chessManager = new GameManager("8/2p5/K2p4/1P6/1R2Ppkr/6P1/8/8 b - e3 0 3");
-        FindObjectOfType<Board>().CreateBoard(chessManager.BoardArray);
+        chessManager = GetComponent<MatchManager>().chessManager;
         fenText.text = chessManager.FEN;
     }
 
     public void Play(GameObject origin, GameObject destiny) {
 
         if (origin == null || destiny == null) {
-            PrivatePlay("a1a1");
+            Play("a1a1");
             return;
         }
 
@@ -49,15 +48,23 @@ public class Manager : MonoBehaviour {
                 item.LoadSprites();
             }
         }
-        else PrivatePlay(orig + target);
+        else Play(orig + target);
+    }
+
+    public void Play(string move) {
+
+        bool result = chessManager.Play(move);
+        if (result) FindObjectOfType<Board>().SetLastMove(move.Substring(0, 2), move.Substring(2, 2));
+        FindObjectOfType<Board>().CreateBoard(chessManager.BoardArray);
 
         fenText.text = chessManager.FEN;
+        GetComponent<MatchManager>().NewTurn();
     }
 
     public void ExecutePromotion(string piece) {
 
         promoPanel.SetActive(false);
-        PrivatePlay(orig + target + piece);
+        Play(orig + target + piece);
     }
 
     public bool IsLegal(string origin, string destiny) {
@@ -72,10 +79,4 @@ public class Manager : MonoBehaviour {
             return false;
     }
 
-    private void PrivatePlay(string move) {
-
-        bool result = chessManager.Play(move);
-        if (result) FindObjectOfType<Board>().SetLastMove(move.Substring(0, 2), move.Substring(2, 2));
-        FindObjectOfType<Board>().CreateBoard(chessManager.BoardArray);
-    }
 }

@@ -6,6 +6,7 @@ using UnityEngine.EventSystems;
 
 public class Drag : MonoBehaviour {
 
+    public bool humanTurn = true;
     private Canvas canvas;
     private GameObject origin;
     private bool dragging = false;
@@ -15,6 +16,8 @@ public class Drag : MonoBehaviour {
     }
 
     public void StartDrag(BaseEventData data) {
+
+        if (!humanTurn) return;
 
         var pointerEvent = (PointerEventData)data;
 
@@ -28,11 +31,14 @@ public class Drag : MonoBehaviour {
     }
 
     public void MouseUp() {
-        if (!dragging) FindObjectOfType<Manager>().Play(null, null);
+        if (!humanTurn) return;
+        if (!dragging) FindObjectOfType<MoveManager>().Play(null, null);
     }
 
     public void Dragging(BaseEventData data) {
         
+        if (!humanTurn) return;
+
         dragging = true;
         var pointerEvent = (PointerEventData)data;
 
@@ -49,6 +55,8 @@ public class Drag : MonoBehaviour {
 
     public void Drop(BaseEventData data) {
 
+        if (!humanTurn) return;
+
         var pieces = GameObject.FindGameObjectsWithTag("Piece");
         foreach (var item in pieces) {
             item.GetComponent<Image>().raycastTarget = false;
@@ -59,8 +67,8 @@ public class Drag : MonoBehaviour {
         List<RaycastResult> result = new List<RaycastResult>();
         EventSystem.current.RaycastAll(pointerEvent, result);
 
-        if (result.Count > 0) FindObjectOfType<Manager>().Play(origin, result[0].gameObject);
-        else FindObjectOfType<Manager>().Play(null, null);
+        if (result.Count > 0) FindObjectOfType<MoveManager>().Play(origin, result[0].gameObject);
+        else FindObjectOfType<MoveManager>().Play(null, null);
 
         dragging = false;
         GameObject.Destroy(gameObject);

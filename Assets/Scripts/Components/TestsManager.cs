@@ -14,7 +14,7 @@ public class TestsManager : MonoBehaviour
 
     public void PrintPositionBreakdown() {
 
-        PrintPositionBreakdown(GetComponent<Manager>().CurrentFEN, int.Parse(depthText.text.Substring(0, 1)));
+        PrintPositionBreakdown(GetComponent<MoveManager>().CurrentFEN, int.Parse(depthText.text.Substring(0, 1)));
     }
 
     public void PrintPositionBreakdown(string fen, int depth) {

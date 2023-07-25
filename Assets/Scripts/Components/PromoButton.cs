@@ -8,11 +8,11 @@ public class PromoButton : MonoBehaviour {
     public char piece;
 
     public void PromoEvent() {
-        FindObjectOfType<Manager>().ExecutePromotion(piece.ToString());
+        FindObjectOfType<MoveManager>().ExecutePromotion(piece.ToString());
     }
 
     public void LoadSprites() {
-        string id = piece.ToString() + FindObjectOfType<Manager>().Turn;
+        string id = piece.ToString() + FindObjectOfType<MoveManager>().Turn;
         GetComponent<Image>().sprite = Resources.Load<Sprite>("Sprites/" + id);
     }
 }
