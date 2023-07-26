@@ -21,6 +21,9 @@ namespace ChessLogic {
         private int _halfMove;
         private int _fullMove;
 
+        public State GameState { get; private set; }
+        public bool Check { get; private set; }
+
         public string FEN { get {
 
             StringBuilder result = new StringBuilder();
@@ -96,7 +99,8 @@ namespace ChessLogic {
             _fullMove = int.Parse(info[5]);
 
             generator = new MovesGenerator(_board.GetBitboards, _board.pieces);
-            _legalMoves = generator.Generate(_sideToMove, _castling, _enPassant);
+            (_legalMoves, Check) = generator.Generate(_sideToMove, _castling, _enPassant);
+            SetState();
         }
 
         public bool Play(string move) {
@@ -165,7 +169,8 @@ namespace ChessLogic {
             _fullMove += _sideToMove == 0 ? 0 : 1;
             _sideToMove ^= 1;
             // Non-optimal
-            _legalMoves = generator.Generate(_sideToMove, _castling, _enPassant);
+            (_legalMoves, Check) = generator.Generate(_sideToMove, _castling, _enPassant);
+            SetState();
         }
 
         public bool IsPromotion(string origin, string destiny) {
@@ -213,7 +218,8 @@ namespace ChessLogic {
             _halfMove = last.Item4;
             _sideToMove ^= 1;
             // Non-optimal
-            _legalMoves = generator.Generate(_sideToMove, _castling, _enPassant);
+            (_legalMoves, Check) = generator.Generate(_sideToMove, _castling, _enPassant);
+            SetState();
         }
 
         public override string ToString() {
@@ -228,6 +234,16 @@ namespace ChessLogic {
                 if (origin == item.Origin && destiny == item.Destiny) return item;
             }
             return null;
+        }
+
+        private void SetState() {
+
+            if (_legalMoves.Count == 0) {
+                if (Check) GameState = (SideToMove == 'b' ? State.WhiteWon : State.BlackWon);
+                else GameState = State.DrawStalemate;
+            }
+            else if (_halfMove >= 100) GameState = State.Draw50Move;
+            else GameState = State.Playing;
         }
     }
 }

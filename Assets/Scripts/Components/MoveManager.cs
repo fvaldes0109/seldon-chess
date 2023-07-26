@@ -16,7 +16,7 @@ public class MoveManager : MonoBehaviour {
     string orig;
     string target;
 
-    public void Start() {
+    public void Init() {
         
         chessManager = GetComponent<MatchManager>().chessManager;
         fenText.text = chessManager.FEN;

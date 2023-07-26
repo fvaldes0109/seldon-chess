@@ -1,3 +1,4 @@
+using System;
 using System.Linq;
 using System.Collections.Generic;
 using UnityEngine;
@@ -32,7 +33,7 @@ namespace ChessLogic {
         }
     
 
-        public List<Move> Generate(int color, ulong castling, ulong enPassant) {
+        public Tuple<List<Move>, bool> Generate(int color, ulong castling, ulong enPassant) {
             
             this.enPassant = enPassant;
             this.castling = castling;
@@ -60,17 +61,7 @@ namespace ChessLogic {
                 GetSlidingMoves(color);
             }
 
-            // System.Console.WriteLine(Bits.BitsToString(enemyAttacks));
-
-            // foreach (var pieces in moves) {
-            //     System.Console.WriteLine(pieces.Key + ": ");
-            //     foreach (var move in pieces.Value) {
-            //         Console.WriteLine(Bits.BitsToString(move));
-            //     }
-            //     System.Console.WriteLine();
-            // }
-
-            return moves;
+            return new Tuple<List<Move>, bool>(moves, checksAmount > 0);
         }
 
         private static ulong EmptySideQ = 0xE;

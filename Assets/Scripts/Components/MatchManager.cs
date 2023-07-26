@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using TMPro;
 
 using ChessLogic;
 using AI;
@@ -8,6 +9,8 @@ using AI;
 public class MatchManager : MonoBehaviour
 {
 
+    public GameObject blockPanel;
+    public TextMeshProUGUI resultText;
     public string startPosition = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
     public bool[] isHuman = new bool[] { true, false };
 
@@ -17,10 +20,18 @@ public class MatchManager : MonoBehaviour
         
         chessManager = new GameManager(startPosition);
         FindObjectOfType<Board>().CreateBoard(chessManager.BoardArray);
+        GetComponent<MoveManager>().Init();
         NewTurn();
     }
 
     public void NewTurn() {
+        
+        if (chessManager.GameState != State.Playing) {
+            
+            blockPanel.SetActive(true);
+            resultText.text = chessManager.GameState.ToString();
+            return;
+        }
 
         if (!isHuman[chessManager.SideToMove == 'w' ? 0 : 1]) {
             
@@ -42,7 +53,7 @@ public class MatchManager : MonoBehaviour
 
     IEnumerator AIMove(string aiMove) {
 
-        yield return new WaitForSeconds(0.5f);
+        yield return new WaitForSeconds(0.01f);
         GetComponent<MoveManager>().Play(aiMove);
     }
 }
